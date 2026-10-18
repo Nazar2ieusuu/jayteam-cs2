@@ -1,0 +1,57 @@
+
+name: Build JayTeam CS2 APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'jayteam-cs2-android-source.zip'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Unpack project archive
+        run: unzip -q jayteam-cs2-android-source.zip -d source
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        working-directory: source/jayteam-cs2-pwa
+        run: npm install
+
+      - name: Build web app
+        working-directory: source/jayteam-cs2-pwa
+        run: npm run build
+
+      - name: Create Android project
+        working-directory: source/jayteam-cs2-pwa
+        run: npx cap add android
+
+      - name: Sync Android project
+        working-directory: source/jayteam-cs2-pwa
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: source/jayteam-cs2-pwa/android
+        run: chmod +x gradlew && ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JayTeam-CS2-APK
+          path: source/jayteam-cs2-pwa/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
